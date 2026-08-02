@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- 🔑 Google Search Console Verification Tag -->
+    <meta name="google-site-verification" content="nn8tw0Syh7_JmClAVBMpD18Ub0FM_3oT3ZfdD9y22Zo" />
+
+    <!-- 🔍 Google Search SEO Meta Tags -->
+    <title>DreamAI Studio - Free AI Image Generator</title>
+    <meta name="description" content="DreamAI Studio is a free AI image generator app. Create realistic AI art and download high-quality images easily.">
+    <meta name="keywords" content="DreamAI Studio, Dream AI, AI image generator, free AI art">
+    <meta name="author" content="DreamAI Studio">
+    <meta name="robots" content="index, follow">
+
+    <!-- 🔥 Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+    <script>
+        // 🔑 ඔයාගේ Firebase Config එක එකතු කර ඇත
+        const firebaseConfig = {
+          apiKey: "AIzaSyBKr2SnlXkEelCX-63fIMMOuGwKeuPK7Bk",
+          authDomain: "dreamaistudio-slakiyaboy.firebaseapp.com",
+          projectId: "dreamaistudio-slakiyaboy",
+          storageBucket: "dreamaistudio-slakiyaboy.firebasestorage.app",
+          messagingSenderId: "1086520485104",
+          appId: "1:1086520485104:web:76101151c6dafa87c20e35",
+          measurementId: "G-0GV3ZCEW4R"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+    </script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0b0b14;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #121225;
+            border-bottom: 1px solid #232342;
+        }
+        .brand-name {
+            font-size: 20px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff007f, #7f00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .coin-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .coin-badge {
+            background: rgba(255, 170, 0, 0.1);
+            border: 1px solid #ffaa00;
+            padding: 6px 14px;
+            border-radius: 20px;
+            color: #ffaa00;
+            font-weight: bold;
+        }
+
+        .workspace {
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .input-container {
+            background: #161630;
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid #2d2d5a;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            background: #0b0b14;
+            color: #fff;
+            border: 1px solid #2d2d5a;
+            border-radius: 10px;
+            padding: 12px;
+            box-sizing: border-box;
+            resize: none;
+            font-size: 15px;
+        }
+        .gen-btn, .action-btn {
+            width: 100%;
+            background: linear-gradient(45deg, #7f00ff, #ff007f);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .download-btn {
+            width: 100%;
+            background: linear-gradient(45deg, #00c853, #00e5ff);
+            color: #000;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        /* 🔐 Auth Overlay */
+        .auth-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(7, 7, 15, 0.98);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .auth-box {
+            background: #161630;
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid #2d2d5a;
+            text-align: center;
+            width: 85%;
+            max-width: 380px;
+        }
+        .auth-box input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border: 1px solid #2d2d5a;
+            background: #0b0b14;
+            color: #fff;
+            box-sizing: border-box;
+        }
+
+        .hidden { display: none !important; }
+        #result { margin-top: 20px; text-align: center; }
+        #result img { max-width: 100%; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- 🔐 Firebase Auth Overlay -->
+    <div id="authScreen" class="auth-overlay">
+        <div class="auth-box">
+            <div class="brand-name" style="font-size: 26px; margin-bottom: 10px;">DreamAI Studio</div>
+            <p id="authStatusText" style="color: #aaa; font-size: 13px;">Create an account with a real Email to get 1,000 Free Coins!</p>
+
+            <input type="email" id="authEmail" placeholder="Email Address">
+            <input type="password" id="authPass" placeholder="Password (Min 6 chars)">
+
+            <button class="action-btn" onclick="signUp()">Register & Send Verification Link</button>
+            <button class="action-btn" style="background:#2d2d5a; margin-top:5px;" onclick="signIn()">Login</button>
+        </div>
+    </div>
+
+    <!-- 📱 Top Bar -->
+    <div class="top-bar">
+        <span class="brand-name">DreamAI Studio</span>
+        <div class="coin-container">
+            <div class="coin-badge">🪙 <span id="coinDisplay">0</span></div>
+            <button style="background:#ff3333; color:#fff; border:none; padding:5px 10px; border-radius:15px; cursor:pointer;" onclick="signOut()">Logout</button>
+        </div>
+    </div>
+
+    <!-- 🎨 Workspace -->
+    <div class="workspace">
+        <div class="input-container">
+            <textarea id="promptInput" placeholder="Describe the image you want to create here..."></textarea>
+            <button class="gen-btn" onclick="generateImage()">Generate Image (Costs 100 Coins)</button>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let currentCoins = 0;
+        let currentUser = null;
+
+        // User Verification Status Check
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                if (!user.emailVerified) {
+                    document.getElementById('authScreen').classList.remove('hidden');
+                    document.getElementById('authStatusText').innerHTML = "<span style='color:#ffaa00;'>⚠️ Please check your Email inbox and click the verification link, then Login again!</span>";
+                } else {
+                    document.getElementById('authScreen').classList.add('hidden');
+                    checkWelcomeCoins(user.uid);
+                }
+            } else {
+                document.getElementById('authScreen').classList.remove('hidden');
+            }
+        });
+
+        function signUp() {
+            const email = document.getElementById('authEmail').value;
+            const pass = document.getElementById('authPass').value;
+
+            auth.createUserWithEmailAndPassword(email, pass)
+                .then((userCredential) => {
+                    userCredential.user.sendEmailVerification();
+                    alert("📧 Verification Link sent to your Email! Please check inbox, verify and login.");
+                })
+                .catch((error) => alert("❌ Error: " + error.message));
+        }
+
+        function signIn() {
+            const email = document.getElementById('authEmail').value;
+            const pass = document.getElementById('authPass').value;
+
+            auth.signInWithEmailAndPassword(email, pass)
+                .then((userCredential) => {
+                    if (!userCredential.user.emailVerified) {
+                        alert("⚠️ Your email is not verified yet! Please check your email inbox.");
+                    }
+                })
+                .catch((error) => alert("❌ Login Failed: " + error.message));
+        }
+
+        function signOut() {
+            auth.signOut();
+        }
+
+        function checkWelcomeCoins(uid) {
+            let userCoins = localStorage.getItem('coins_' + uid);
+            if (userCoins === null) {
+                currentCoins = 1000;
+                localStorage.setItem('coins_' + uid, currentCoins);
+                alert('🎉 Email Verified! 1,000 Welcome Coins credited to your account.');
+            } else {
+                currentCoins = parseInt(userCoins);
+            }
+            updateCoinDisplay();
+        }
+
+        function updateCoinDisplay() {
+            document.getElementById('coinDisplay').innerText = currentCoins;
+        }
+
+        function generateImage() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            if (!prompt) return alert('Please enter a prompt!');
+            if (currentCoins < 100) return alert('❌ Out of Coins!');
+
+            currentCoins -= 100;
+            localStorage.setItem('coins_' + currentUser.uid, currentCoins);
+            updateCoinDisplay();
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = "<p style='color:#00e5ff;'>🎨 Generating your image...</p>";
+            
+            const randomSeed = Math.floor(Math.random() * 100000);
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&seed=${randomSeed}`;
+
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = imageUrl;
+
+            img.onload = function() {
+                resultDiv.innerHTML = ""; 
+                resultDiv.appendChild(img);
+
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = "download-btn";
+                downloadBtn.innerHTML = "📥 Download Image";
+                downloadBtn.onclick = function() { downloadImageFile(imageUrl); };
+                resultDiv.appendChild(downloadBtn);
+            };
+        }
+
+        async function downloadImageFile(url) {
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `DreamAI_${Date.now()}.jpg`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (error) {
+                window.open(url, '_blank');
+            }
+        }
+    </script>
+</body>
+</html>
