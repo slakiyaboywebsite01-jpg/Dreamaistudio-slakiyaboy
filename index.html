@@ -246,10 +246,10 @@
             btn.innerText = "Sending Code...";
             btn.disabled = true;
 
-            // Send via EmailJS
+            // Send via EmailJS (Using standard template variables: email & passcode)
             emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-                to_email: tempEmail,
-                otp_code: generatedOTP
+                email: tempEmail,
+                passcode: generatedOTP
             })
             .then(() => {
                 alert("📩 6-Digit Verification Code sent to your email!");
