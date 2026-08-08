@@ -10,16 +10,24 @@
     <!-- 🔍 Google Search SEO Meta Tags -->
     <title>DreamAI Studio - Free AI Image Generator</title>
     <meta name="description" content="DreamAI Studio is a free AI image generator app. Create realistic AI art and download high-quality images easily.">
-    <meta name="keywords" content="DreamAI Studio, Dream AI, AI image generator, free AI art">
-    <meta name="author" content="DreamAI Studio">
     <meta name="robots" content="index, follow">
 
     <!-- 🔥 Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
+    <!-- 📧 EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
     <script>
-        // 🔑 ඔයාගේ Firebase Config එක එකතු කර ඇත
+        // 🔑 EmailJS Keys
+        const EMAILJS_PUBLIC_KEY = "DRz-Dz1A2N5fzFfcO";
+        const EMAILJS_SERVICE_ID = "service_slakiyaboy";
+        const EMAILJS_TEMPLATE_ID = "template_sd0nyro";
+
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+
+        // 🔑 Firebase Config
         const firebaseConfig = {
           apiKey: "AIzaSyBKr2SnlXkEelCX-63fIMMOuGwKeuPK7Bk",
           authDomain: "dreamaistudio-slakiyaboy.firebaseapp.com",
@@ -122,7 +130,7 @@
             margin-top: 15px;
         }
 
-        /* 🔐 Auth Overlay */
+        /* 🔐 Register / Verification Overlay */
         .auth-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -150,6 +158,7 @@
             background: #0b0b14;
             color: #fff;
             box-sizing: border-box;
+            text-align: center;
         }
 
         .hidden { display: none !important; }
@@ -159,17 +168,29 @@
 </head>
 <body>
 
-    <!-- 🔐 Firebase Auth Overlay -->
+    <!-- 🔐 Register / OTP Overlay -->
     <div id="authScreen" class="auth-overlay">
         <div class="auth-box">
             <div class="brand-name" style="font-size: 26px; margin-bottom: 10px;">DreamAI Studio</div>
-            <p id="authStatusText" style="color: #aaa; font-size: 13px;">Create an account with a real Email to get 1,000 Free Coins!</p>
+            
+            <!-- STEP 1: Email & Password Input -->
+            <div id="step1">
+                <p style="color: #aaa; font-size: 13px;">Register to get 1,000 Free Coins!</p>
+                <input type="email" id="authEmail" placeholder="Email Address">
+                <input type="password" id="authPass" placeholder="Password (Min 6 chars)">
 
-            <input type="email" id="authEmail" placeholder="Email Address">
-            <input type="password" id="authPass" placeholder="Password (Min 6 chars)">
+                <button class="action-btn" id="sendCodeBtn" onclick="sendVerificationCode()">Send 6-Digit Code</button>
+                <button class="action-btn" style="background:#2d2d5a; margin-top:5px;" onclick="signInDirectly()">Login</button>
+            </div>
 
-            <button class="action-btn" onclick="signUp()">Register & Send Verification Link</button>
-            <button class="action-btn" style="background:#2d2d5a; margin-top:5px;" onclick="signIn()">Login</button>
+            <!-- STEP 2: Code Enter Box -->
+            <div id="step2" class="hidden">
+                <p style="color: #00e5ff; font-size: 13px;">📧 We sent a 6-digit code to your email. Enter it below:</p>
+                <input type="text" id="otpInput" maxlength="6" placeholder="ENTER 6-DIGIT CODE" style="font-size: 18px; letter-spacing: 4px; font-weight: bold;">
+
+                <button class="action-btn" style="background: linear-gradient(45deg, #00c853, #00e5ff); color:#000;" onclick="verifyAndRegister()">Verify Code & Get 1,000 Coins</button>
+                <button class="action-btn" style="background:transparent; color:#888; font-size:12px;" onclick="backToStep1()">← Change Email</button>
+            </div>
         </div>
     </div>
 
@@ -195,58 +216,104 @@
     <script>
         let currentCoins = 0;
         let currentUser = null;
+        let generatedOTP = null;
+        let tempEmail = "";
+        let tempPass = "";
 
-        // User Verification Status Check
+        // Check Login Status
         auth.onAuthStateChanged((user) => {
             if (user) {
                 currentUser = user;
-                if (!user.emailVerified) {
-                    document.getElementById('authScreen').classList.remove('hidden');
-                    document.getElementById('authStatusText').innerHTML = "<span style='color:#ffaa00;'>⚠️ Please check your Email inbox and click the verification link, then Login again!</span>";
-                } else {
-                    document.getElementById('authScreen').classList.add('hidden');
-                    checkWelcomeCoins(user.uid);
-                }
+                document.getElementById('authScreen').classList.add('hidden');
+                loadUserCoins(user.uid);
             } else {
                 document.getElementById('authScreen').classList.remove('hidden');
             }
         });
 
-        function signUp() {
-            const email = document.getElementById('authEmail').value;
-            const pass = document.getElementById('authPass').value;
+        // 1. Send 6-Digit Code to Email
+        function sendVerificationCode() {
+            tempEmail = document.getElementById('authEmail').value.trim();
+            tempPass = document.getElementById('authPass').value.trim();
 
-            auth.createUserWithEmailAndPassword(email, pass)
-                .then((userCredential) => {
-                    userCredential.user.sendEmailVerification();
-                    alert("📧 Verification Link sent to your Email! Please check inbox, verify and login.");
-                })
-                .catch((error) => alert("❌ Error: " + error.message));
+            if (!tempEmail || !tempEmail.includes('@')) return alert('Please enter a valid email address!');
+            if (tempPass.length < 6) return alert('Password must be at least 6 characters!');
+
+            // Generate 6-digit Random OTP
+            generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+
+            const btn = document.getElementById('sendCodeBtn');
+            btn.innerText = "Sending Code...";
+            btn.disabled = true;
+
+            // Send via EmailJS
+            emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+                to_email: tempEmail,
+                otp_code: generatedOTP
+            })
+            .then(() => {
+                alert("📩 6-Digit Verification Code sent to your email!");
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.remove('hidden');
+            })
+            .catch((err) => {
+                alert("❌ Failed to send code: " + JSON.stringify(err));
+            })
+            .finally(() => {
+                btn.innerText = "Send 6-Digit Code";
+                btn.disabled = false;
+            });
         }
 
-        function signIn() {
-            const email = document.getElementById('authEmail').value;
-            const pass = document.getElementById('authPass').value;
+        // 2. Verify Code & Create Account
+        function verifyAndRegister() {
+            const userEnteredOTP = document.getElementById('otpInput').value.trim();
+
+            if (userEnteredOTP !== generatedOTP) {
+                return alert('❌ Incorrect Verification Code! Please check your email.');
+            }
+
+            // Code is Correct! Register Firebase User
+            auth.createUserWithEmailAndPassword(tempEmail, tempPass)
+                .then((userCredential) => {
+                    const uid = userCredential.user.uid;
+                    
+                    // Give 1,000 Coins to First-Time User
+                    currentCoins = 1000;
+                    localStorage.setItem('coins_' + uid, currentCoins);
+                    
+                    alert('🎉 Account Created & Verified Successfully! 1,000 Free Coins added.');
+                    document.getElementById('authScreen').classList.add('hidden');
+                    updateCoinDisplay();
+                })
+                .catch((error) => {
+                    alert("❌ Account Creation Error: " + error.message);
+                });
+        }
+
+        function signInDirectly() {
+            const email = document.getElementById('authEmail').value.trim();
+            const pass = document.getElementById('authPass').value.trim();
 
             auth.signInWithEmailAndPassword(email, pass)
-                .then((userCredential) => {
-                    if (!userCredential.user.emailVerified) {
-                        alert("⚠️ Your email is not verified yet! Please check your email inbox.");
-                    }
-                })
+                .then(() => alert("🎉 Welcome Back!"))
                 .catch((error) => alert("❌ Login Failed: " + error.message));
+        }
+
+        function backToStep1() {
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step1').classList.remove('hidden');
         }
 
         function signOut() {
             auth.signOut();
         }
 
-        function checkWelcomeCoins(uid) {
+        function loadUserCoins(uid) {
             let userCoins = localStorage.getItem('coins_' + uid);
             if (userCoins === null) {
                 currentCoins = 1000;
                 localStorage.setItem('coins_' + uid, currentCoins);
-                alert('🎉 Email Verified! 1,000 Welcome Coins credited to your account.');
             } else {
                 currentCoins = parseInt(userCoins);
             }
@@ -267,7 +334,7 @@
             updateCoinDisplay();
 
             const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = "<p style='color:#00e5ff;'>🎨 Generating your image...</p>";
+            resultDiv.innerHTML = "<p style='color:#00e5ff;'>🎨 Generating your art...</p>";
             
             const randomSeed = Math.floor(Math.random() * 100000);
             const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&seed=${randomSeed}`;
